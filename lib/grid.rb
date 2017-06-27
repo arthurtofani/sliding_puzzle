@@ -1,5 +1,6 @@
 require 'algorithms'
 require_relative './errors'
+require 'pry'
 
 module SlidingPuzzle
   class Grid
@@ -8,7 +9,7 @@ module SlidingPuzzle
       if valid? grid
         @grid = grid
       else
-        raise ::SlidingPuzzle::InvalidGridError
+        raise 'err'
       end
     end
 
@@ -71,7 +72,7 @@ module SlidingPuzzle
     end
 
     def solved?
-      tiles == [*0...grid_size].rotate(1)
+      tiles == [*0...grid_size].rotate(0)
     end
 
     def solvable?
@@ -87,6 +88,10 @@ module SlidingPuzzle
       tiles.map.with_index do |tile, pos|
         tile == 0 || tile == pos + 1 ? 0 : 1
       end.reduce(:+)
+    end
+
+    def pattern_database
+      # calcular a distancia entre o problema atual relaxado e uma possível solução
     end
 
     def manhattan_distance
@@ -202,6 +207,7 @@ module SlidingPuzzle
     end
 
     def ida_star
+      ct = 0
       by_min_value = -> x, y { x <= y }
       q = Containers::PriorityQueue.new &by_min_value
 
@@ -214,9 +220,12 @@ module SlidingPuzzle
 
         until priority > threshold
           steps_taken, currently_at, cost = q.pop
-          journey = [steps_taken, currently_at]
 
+          ct+=1; puts(ct)
+
+          journey = [steps_taken, currently_at]
           return journey.flatten if currently_at.solved?
+
 
           directions
             .map { |way| currently_at.slide(way) }
