@@ -4,15 +4,38 @@ require 'pry'
 
 class SlidingPuzzle::RelaxedGrid < SlidingPuzzle::Grid
 
+  attr_accessor :directions
   def initialize(solution, grid = random_puzzle)
+    @directions = []
+    @statistics = {nodes_visited: 0}
     @grid = grid
     @solution = solution
+
   end
 
   def solved?
-    tiles == @solution
+    (tiles == @solution)
   end
 
+
+  def slide!(direction)
+    r, c = blank_at_row, blank_at_column
+    self.tap do
+      case direction
+      when :left  then swap r, c + 1 unless c == width - 1
+      when :right then swap r, c - 1 unless c == 0
+      when :up    then swap r + 1, c unless r == height - 1
+      when :down  then swap r - 1, c unless r == 0
+      else puts 'Valid input for slide: :up, :down, :left, :right'
+      end
+    end
+  end
+
+  def slide(direction)
+    copy = Marshal.load(Marshal.dump(self))
+    copy.directions.push(direction)
+    copy.slide!(direction)
+  end
 
 
   def ida_star
@@ -32,9 +55,11 @@ class SlidingPuzzle::RelaxedGrid < SlidingPuzzle::Grid
 
 
         journey = [steps_taken, currently_at]
-        return journey.flatten if currently_at.solved?
+        if currently_at.solved?
+          return journey.last.directions
+        end
 
-        #binding.pry
+
 
         directions
           .map { |way| currently_at.slide(way) }
@@ -52,18 +77,5 @@ class SlidingPuzzle::RelaxedGrid < SlidingPuzzle::Grid
     end
   end
 
-
-    def slide!(direction)
-      r, c = blank_at_row, blank_at_column
-      self.tap do
-        case direction
-        when :left  then swap r, c + 1 unless c == width - 1
-        when :right then swap r, c - 1 unless c == 0
-        when :up    then swap r + 1, c unless r == height - 1
-        when :down  then swap r - 1, c unless r == 0
-        else puts 'Valid input for slide: :up, :down, :left, :right'
-        end
-      end
-    end
 
 end

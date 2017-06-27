@@ -13,6 +13,12 @@ module SlidingPuzzle
       end
     end
 
+    def train_pattern
+      @pdb = SlidingPuzzle::PatternDatabase.new [[0,-1,-1],[-1,-1,-1],[-1,-1,8]]
+      @pdb.train
+      puts "Pattern Database trained."
+    end
+
     def grid
       @grid
     end
@@ -92,6 +98,15 @@ module SlidingPuzzle
 
     def pattern_database
       # calcular a distancia entre o problema atual relaxado e uma possível solução
+      pdb = @pdb.cost(@grid.flatten)
+      m = manhattan_distance
+      puts((pdb > m) ? "manhattan" : "pdb")
+      [pdb, m].min
+
+    end
+
+    def heuristic
+      pattern_database
     end
 
     def manhattan_distance
@@ -178,40 +193,14 @@ module SlidingPuzzle
       ida_star
     end
 
-    def a_star
-      by_min_value = -> x, y { x <= y }
-      q = Containers::PriorityQueue.new &by_min_value
-
-      state = [[], self, 0]
-      priority = manhattan_distance + linear_conflict
-      directions = [:up, :down, :left, :right]
-
-      q.push(state, priority)
-
-      until q.empty?
-        steps_taken, currently_at, cost = q.pop
-        journey = [steps_taken, currently_at]
-
-        return journey.flatten if currently_at.solved?
-
-        directions
-          .map { |way| currently_at.slide(way) }
-          .tap { cost += 1 }
-          .reject { |g| g == currently_at || g == steps_taken.flatten.last }
-          .each do |next_step|
-            state = [journey, next_step, cost]
-            priority = cost + next_step.manhattan_distance + next_step.linear_conflict
-            q.push(state, priority)
-          end
-      end
-    end
 
     def ida_star
       ct = 0
       by_min_value = -> x, y { x <= y }
       q = Containers::PriorityQueue.new &by_min_value
 
-      threshold = priority = manhattan_distance + linear_conflict
+
+      threshold = priority = heuristic + linear_conflict
       directions = [:up, :down, :left, :right]
 
       loop do
@@ -221,7 +210,7 @@ module SlidingPuzzle
         until priority > threshold
           steps_taken, currently_at, cost = q.pop
 
-          ct+=1; puts(ct)
+          #ct+=1; puts(ct)
 
           journey = [steps_taken, currently_at]
           return journey.flatten if currently_at.solved?
@@ -233,7 +222,7 @@ module SlidingPuzzle
             .reject { |g| g == currently_at || g == steps_taken.flatten.last }
             .each do |next_step|
               state = [journey, next_step, cost]
-              priority = cost + next_step.manhattan_distance + next_step.linear_conflict
+              priority = cost + next_step.heuristic + next_step.linear_conflict
               q.push(state, priority)
             end
         end
