@@ -5,11 +5,11 @@ require 'pry'
 class SlidingPuzzle::RelaxedGrid < SlidingPuzzle::Grid
 
   attr_accessor :directions
-  def initialize(solution, grid = random_puzzle)
+  def initialize(solution, grid = random_puzzle)    
     @directions = []
-    @statistics = {nodes_visited: 0}
     @grid = grid
     @solution = solution
+    @statistics = {nodes_visited: 0, nodes_enqueued: 0, directions: [], h: @h}
 
   end
 
@@ -17,6 +17,12 @@ class SlidingPuzzle::RelaxedGrid < SlidingPuzzle::Grid
     (tiles == @solution)
   end
 
+
+    def solve_it
+      a = ida_star
+      #binding.pry if a==[[-1, -1, -1], [-1, -1, 0], [-1, 7, 8]]
+      a
+    end
 
   def slide!(direction)
     r, c = blank_at_row, blank_at_column
@@ -37,6 +43,20 @@ class SlidingPuzzle::RelaxedGrid < SlidingPuzzle::Grid
     copy.slide!(direction)
   end
 
+  def manhattan_distance
+    @grid.map.with_index do |row, r|
+      row.map.with_index do |tile, c|
+        if tile == 0
+          0
+        else
+          target_row = ((tile - 1) / height) + 1
+          target_col = tile % height
+          target_col = height if target_col == 0
+          (r + 1 - target_row).abs + (c + 1 - target_col).abs
+        end
+      end
+    end.flatten.reduce(:+)
+  end
 
   def ida_star
     ct = 0
@@ -52,7 +72,6 @@ class SlidingPuzzle::RelaxedGrid < SlidingPuzzle::Grid
 
       until priority > threshold
         steps_taken, currently_at, cost = q.pop
-
 
         journey = [steps_taken, currently_at]
         if currently_at.solved?
@@ -70,11 +89,11 @@ class SlidingPuzzle::RelaxedGrid < SlidingPuzzle::Grid
             priority = cost + next_step.manhattan_distance + next_step.linear_conflict
             q.push(state, priority)
           end
-      end
-
+      end      
       threshold = priority
       q.clear
     end
+
   end
 
 

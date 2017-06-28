@@ -4,19 +4,26 @@ require 'pry'
 
 module SlidingPuzzle
   class Grid
-
+    attr_accessor :statistics, :directions
     def initialize(grid = random_puzzle)
+      @directions = []
+      #@h = :pattern_database
+      @h = :manhattan_distance
       if valid? grid
         @grid = grid
+        @statistics = {nodes_visited: 0, nodes_enqueued: 0, directions: [], h: @h}
       else
         raise 'err'
       end
     end
 
     def train_pattern
-      @pdb = SlidingPuzzle::PatternDatabase.new [[0,-1,-1],[-1,-1,-1],[-1,-1,8]]
-      @pdb.train
-      puts "Pattern Database trained."
+      pattern = [[-1,-1,-1],[0,-1,-1],[6,-1,8]]
+      #pattern3 = [[-1,2,0],[-1,-1,0],[-1, -1, -1]]
+      pattern2 = [[-1,-1,-1],[-1,-1,0],[-1,-1,8]]
+      @pdb = SlidingPuzzle::PatternDatabase.new
+      @pdb.train([pattern, pattern2])
+
     end
 
     def grid
@@ -72,13 +79,15 @@ module SlidingPuzzle
       end
     end
 
-    def slide(direction)
+    def slide(direction)      
       copy = Marshal.load(Marshal.dump(self))
+      copy.directions.push(direction)
       copy.slide!(direction)
     end
 
     def solved?
-      tiles == [*0...grid_size].rotate(0)
+      v = tiles == [*0...grid_size].rotate(0)
+      v
     end
 
     def solvable?
@@ -86,7 +95,8 @@ module SlidingPuzzle
       (height.even? && (inversions.even?  == blank_at_row.odd?))
     end
 
-    def solve
+    def solve(h=:manhattan_distance)
+      @h = h
       solved? ? solved : solvable? ? solve_it : insoluble
     end
 
@@ -98,18 +108,27 @@ module SlidingPuzzle
 
     def pattern_database
       # calcular a distancia entre o problema atual relaxado e uma possível solução
-      pdb = @pdb.cost(@grid.flatten)
-      m = manhattan_distance
-      puts((pdb > m) ? "manhattan" : "pdb")
-      [pdb, m].min
-
+      #manhattan_distance + (@pdb.cost(@grid.flatten).count rescue @pdb.max_cost)
+      cost = @pdb.cost(@grid.flatten)
+      cost.count rescue 999
+      #binding.pry
+      # if pdb.nil?
+      #   m = manhattan_distance
+      #   puts "manhattan_distance #{m}"
+      #   return m
+      # else
+      #   puts "pdb - #{pdb}=>#{cost}"
+      #   return pdb
+      # end
     end
 
     def heuristic
-      pattern_database
+      return pattern_database if @h == :pattern_database
+      return manhattan_distance if @h == :manhattan_distance
     end
 
     def manhattan_distance
+      #binding.pry
       @grid.map.with_index do |row, r|
         row.map.with_index do |tile, c|
           if tile == 0
@@ -183,6 +202,7 @@ module SlidingPuzzle
 
     def solved
       @grid.tap { puts 'This puzzle is already solved.'}
+      []
     end
 
     def insoluble
@@ -190,7 +210,10 @@ module SlidingPuzzle
     end
 
     def solve_it
-      ida_star
+      a = ida_star
+      @statistics[:h] = @h
+      @statistics[:directions] = a
+      @statistics
     end
 
 
@@ -202,18 +225,21 @@ module SlidingPuzzle
 
       threshold = priority = heuristic + linear_conflict
       directions = [:up, :down, :left, :right]
-
       loop do
         state = [[], self, 0]
         q.push(state, priority)
 
         until priority > threshold
           steps_taken, currently_at, cost = q.pop
+          @statistics[:nodes_visited] +=1
 
           #ct+=1; puts(ct)
 
           journey = [steps_taken, currently_at]
-          return journey.flatten if currently_at.solved?
+          
+          if currently_at.solved?
+            return journey.last.directions            
+          end
 
 
           directions
@@ -223,6 +249,9 @@ module SlidingPuzzle
             .each do |next_step|
               state = [journey, next_step, cost]
               priority = cost + next_step.heuristic + next_step.linear_conflict
+              #binding.pry if next_step.heuristic==1
+
+              @statistics[:nodes_enqueued] +=1
               q.push(state, priority)
             end
         end
