@@ -37,7 +37,7 @@ class SlidingPuzzle::PatternDatabase
       #puts "Loaded from file"
     rescue      
       puts "Cant load from file, needs new training"            
-      train!(target_pattern)
+      compute!(target_pattern)
     end
     @loaded = false
     end
@@ -69,7 +69,7 @@ class SlidingPuzzle::PatternDatabase
     @solutions[key] = value
   end
 
-  def train(target_patterns)
+  def compute(target_patterns)
     load_solutions(target_patterns)
     @solutions.keys.each do |key|
       @solutions.delete(key) if @solutions[key].count == 0
@@ -77,7 +77,7 @@ class SlidingPuzzle::PatternDatabase
     @pattern_formats = @solutions.keys.map{|s| s.map{|r| (r==-1) ? nil : r}.compact.sort}.uniq
   end
 
-  def train!(target_pattern)
+  def compute!(target_pattern)
     # monta a base de soluções para o problema relaxado
     permutations = target_pattern.flatten.unique_permutation
     permutations_count = permutations.count

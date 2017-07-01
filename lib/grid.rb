@@ -17,12 +17,9 @@ module SlidingPuzzle
       end
     end
 
-    def train_pattern
-      pattern = [[-1,-1,-1],[0,-1,-1],[6,-1,8]]
-      #pattern3 = [[-1,2,0],[-1,-1,0],[-1, -1, -1]]
-      pattern2 = [[-1,-1,-1],[-1,-1,0],[-1,-1,8]]
+    def compute_pattern(patterns)
       @pdb = SlidingPuzzle::PatternDatabase.new
-      @pdb.train([pattern, pattern2])
+      @pdb.compute(patterns)
 
     end
 
@@ -95,7 +92,9 @@ module SlidingPuzzle
       (height.even? && (inversions.even?  == blank_at_row.odd?))
     end
 
-    def solve(h=:manhattan_distance)
+    def solve(h=:manhattan_distance, max_time)
+      @max_time = max_time
+      @time = Time.now
       @h = h
       solved? ? solved : solvable? ? solve_it : insoluble
     end
@@ -213,6 +212,7 @@ module SlidingPuzzle
       a = ida_star
       @statistics[:h] = @h
       @statistics[:directions] = a
+      @statistics[:time] = (Time.now - @time)
       @statistics
     end
 
@@ -249,6 +249,9 @@ module SlidingPuzzle
             .each do |next_step|
               state = [journey, next_step, cost]
               priority = cost + next_step.heuristic + next_step.linear_conflict
+              tt = (Time.now - @time)
+              #puts tt
+              raise "timeout" if (tt>@max_time)
               #binding.pry if next_step.heuristic==1
 
               @statistics[:nodes_enqueued] +=1
